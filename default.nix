@@ -59,6 +59,8 @@ stdenv.mkDerivation rec {
         --set-interpreter "${interpreter}" \
         --set-rpath "${libraryPath}" \
         $out/bin/cjc
+
+      wrapProgram $out/bin/cjc
     '';
 
   meta = {
