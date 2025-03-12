@@ -8,16 +8,21 @@ stdenv.mkDerivation rec {
     let
       getArch =
         {
-          # "aarch64-darwin" = "darwin_aarch64";
-          # "x86_64-darwin" = "darwin_x64";
+          "aarch64-darwin" = "darwin_aarch64";
+          "x86_64-darwin" = "darwin_x64";
           "aarch64-linux" = "linux_aarch64";
           "x86_64-linux" = "linux_x64";
         }
         .${stdenv.system} or (throw "${pname}-${version}: ${stdenv.system} is unsupported.");
 
       getUrl =
-        version: arch:
-        "https://github.com/gtn1024/cangjie-distribution/releases/download/v${version}/Cangjie-${version}-${arch}.tar.gz";
+        {
+          "aarch64-darwin" = "https://cangjie-lang.cn/v1/files/auth/downLoad?nsId=142267&fileName=Cangjie-0.53.13-darwin_aarch64.tar.gz&objectKey=6719f1b33af6947e3c6af322";
+          "x86_64-darwin" = "https://cangjie-lang.cn/v1/files/auth/downLoad?nsId=142267&fileName=Cangjie-0.53.13-darwin_x64.tar.gz&objectKey=6719f1c13af6947e3c6af325";
+          "aarch64-linux" = "https://cangjie-lang.cn/v1/files/auth/downLoad?nsId=142267&fileName=Cangjie-0.53.13-linux_aarch64.tar.gz&objectKey=6719f1ec3af6947e3c6af328";
+          "x86_64-linux" = "https://cangjie-lang.cn/v1/files/auth/downLoad?nsId=142267&fileName=Cangjie-0.53.13-linux_x64.tar.gz&objectKey=6719f1eb3af6947e3c6af327";
+        }
+        .${stdenv.system} or (throw "${pname}-${version}: ${stdenv.system} is unsupported.");
 
       getHash =
         arch:
@@ -30,7 +35,7 @@ stdenv.mkDerivation rec {
         .${arch};
     in
     fetchurl {
-      url = getUrl version getArch;
+      url = getUrl;
       sha256 = getHash getArch;
     };
 
@@ -69,5 +74,6 @@ stdenv.mkDerivation rec {
     license = lib.licenses.asl20;
     maintainers = with lib.maintainers; [ gtn1024 ];
     platforms = lib.platforms.linux;
+    outputsToInstall = [ "out" ];
   };
 }
