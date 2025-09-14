@@ -56,13 +56,31 @@ stdenv.mkDerivation rec {
         "x86_64-linux" = "${glibc}/lib/ld-linux-x86-64.so.2";
         "aarch64-linux" = "${glibc}/lib/ld-linux-aarch64.so.1";
       }.${stdenv.system};
+
+      # Get the GCC toolchain path for C runtime files
+      gccVersion = stdenv.cc.cc.version;
+      gccLib = "${stdenv.cc.cc}/lib/gcc/${stdenv.targetPlatform.config}/${gccVersion}";
+      toolchainPaths = [
+        gccLib                  # Contains crtbeginS.o, crtendS.o
+        "${glibc}/lib"         # Contains Scrt1.o, crti.o, crtn.o
+      ];
+      librarySearchPaths = [
+        "${glibc}/lib"         # Contains libc.so, libm.so
+        "${stdenv.cc.cc.lib}/lib"  # Contains libgcc_s.so and other gcc libs
+      ];
     in ''
       patchelf \
         --set-interpreter "${interpreter}" \
         --set-rpath "${libraryPath}" \
         $out/bin/cjc
 
-      wrapProgram $out/bin/cjc
+      # Create a wrapper script that automatically passes toolchain paths
+      mv $out/bin/cjc $out/bin/.cjc-unwrapped
+      cat > $out/bin/cjc <<EOF
+#!/bin/sh
+exec $out/bin/.cjc-unwrapped ${lib.concatMapStringsSep " " (path: "-B${path}") toolchainPaths} ${lib.concatMapStringsSep " " (path: "-L${path}") librarySearchPaths} "\$@"
+EOF
+      chmod +x $out/bin/cjc
     '';
 
   meta = {
