@@ -50,11 +50,23 @@ stdenv.mkDerivation rec {
   installPhase = ''
     mkdir -p $out
     mv * $out
+
+    # Create lib directory and symlink ld-linux-x86-64.so.2
+    mkdir -p $out/lib
+    ${if stdenv.system == "x86_64-linux" then ''
+      ln -s ${glibc}/lib/ld-linux-x86-64.so.2 $out/lib/
+      ln -s ${stdenv.cc.cc.lib}/lib/libstdc++.so.6 $out/lib/
+    '' else if stdenv.system == "aarch64-linux" then ''
+      ln -s ${glibc}/lib/ld-linux-aarch64.so.1 $out/lib/
+      ln -s ${stdenv.cc.cc.lib}/lib/libstdc++.so.6 $out/lib/
+    '' else ""}
   '';
 
   postFixup =
     let
-      libraryPath = lib.makeLibraryPath [ glibc openssl stdenv.cc.cc.lib gcc.cc.lib ];
+      # Include LLVM library paths from the distribution itself
+      llvmLibPath = "$out/third_party/llvm/lib";
+      libraryPath = lib.makeLibraryPath [ glibc openssl stdenv.cc.cc.lib gcc.cc.lib ] + ":${llvmLibPath}";
       interpreter = {
         "x86_64-linux" = "${glibc}/lib/ld-linux-x86-64.so.2";
         "aarch64-linux" = "${glibc}/lib/ld-linux-aarch64.so.1";
@@ -67,10 +79,17 @@ stdenv.mkDerivation rec {
       gccVersion = stdenv.cc.cc.version;
       gccLib = "${stdenv.cc.cc}/lib/gcc/${stdenv.targetPlatform.config}/${gccVersion}";
     in ''
-      patchelf \
-        --set-interpreter "${interpreter}" \
-        --set-rpath "${libraryPath}" \
-        $out/bin/cjc
+      # Discover and include all library directories from the distribution
+      libDirs=$(find $out -name "*.so*" -type f | xargs dirname | sort -u | tr '\n' ':')
+
+      # Patch all ELF binaries in the distribution
+      find $out -type f -executable -exec file {} \; | grep -E "ELF.*executable" | cut -d: -f1 | while read binary; do
+        echo "Patching binary: $binary"
+        patchelf \
+          --set-interpreter "${interpreter}" \
+          --set-rpath "${libraryPath}:$libDirs" \
+          "$binary" || echo "Failed to patch $binary (might not be dynamically linked)"
+      done
 
       # Create a wrapper script using --sysroot with explicit binary tool paths
       mv $out/bin/cjc $out/bin/.cjc-unwrapped
