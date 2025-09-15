@@ -1,4 +1,4 @@
-{ lib, stdenv, fetchurl, makeWrapper, unzip, binutils, gcc, glibc, openssl, patchelf }:
+{ lib, stdenv, fetchurl, makeWrapper, pkgs, unzip, binutils, gcc, glibc, openssl, patchelf }:
 
 stdenv.mkDerivation rec {
   pname = "cangjie";
@@ -36,12 +36,15 @@ stdenv.mkDerivation rec {
       sha256 = getHash getArch;
     };
 
-  nativeBuildInputs = [ makeWrapper binutils gcc patchelf ];
+  nativeBuildInputs = [ makeWrapper binutils.bintools gcc patchelf ];
 
   buildInputs = [
+    binutils.bintools
     glibc
     openssl
     stdenv.cc.cc.lib
+    # Add additional runtime libraries that might be needed
+    gcc.cc.lib
   ];
 
   installPhase = ''
@@ -51,34 +54,39 @@ stdenv.mkDerivation rec {
 
   postFixup =
     let
-      libraryPath = lib.makeLibraryPath [ glibc openssl stdenv.cc.cc.lib ];
+      libraryPath = lib.makeLibraryPath [ glibc openssl stdenv.cc.cc.lib gcc.cc.lib ];
       interpreter = {
         "x86_64-linux" = "${glibc}/lib/ld-linux-x86-64.so.2";
         "aarch64-linux" = "${glibc}/lib/ld-linux-aarch64.so.1";
       }.${stdenv.system};
 
-      # Get the GCC toolchain path for C runtime files
+      # Use sysroot approach combined with explicit binary tool paths
+      sysroot = stdenv.cc.cc;
+      # Cangjie needs explicit paths to find ar, ld and other binutils
+      binPath = "${binutils.bintools}/bin";
       gccVersion = stdenv.cc.cc.version;
       gccLib = "${stdenv.cc.cc}/lib/gcc/${stdenv.targetPlatform.config}/${gccVersion}";
-      toolchainPaths = [
-        gccLib                  # Contains crtbeginS.o, crtendS.o
-        "${glibc}/lib"         # Contains Scrt1.o, crti.o, crtn.o
-      ];
-      librarySearchPaths = [
-        "${glibc}/lib"         # Contains libc.so, libm.so
-        "${stdenv.cc.cc.lib}/lib"  # Contains libgcc_s.so and other gcc libs
-      ];
     in ''
       patchelf \
         --set-interpreter "${interpreter}" \
         --set-rpath "${libraryPath}" \
         $out/bin/cjc
 
-      # Create a wrapper script that automatically passes toolchain paths
+      # Create a wrapper script using --sysroot with explicit binary tool paths
       mv $out/bin/cjc $out/bin/.cjc-unwrapped
       cat > $out/bin/cjc <<EOF
 #!/bin/sh
-exec $out/bin/.cjc-unwrapped ${lib.concatMapStringsSep " " (path: "-B${path}") toolchainPaths} ${lib.concatMapStringsSep " " (path: "-L${path}") librarySearchPaths} "\$@"
+# Use --sysroot for automatic toolchain detection combined with -B for binary tools and -L for libraries
+exec $out/bin/.cjc-unwrapped \\
+  --sysroot "${sysroot}" \\
+  -B"${binPath}" \\
+  -B"${gccLib}" \\
+  -B"${glibc}/lib" \\
+  -L"${gccLib}" \\
+  -L"${glibc}/lib" \\
+  -L"${stdenv.cc.cc.lib}/lib" \\
+  -L"${gcc.cc.lib}/lib" \\
+  "\$@"
 EOF
       chmod +x $out/bin/cjc
     '';
