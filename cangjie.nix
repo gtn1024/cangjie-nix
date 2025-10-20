@@ -2,7 +2,7 @@
 
 stdenv.mkDerivation rec {
   pname = "cangjie";
-  version = "1.0.1";
+  version = "1.0.3";
 
   src =
     let
@@ -25,9 +25,9 @@ stdenv.mkDerivation rec {
       getHash =
         arch:
         {
-          "darwin_aarch64" = "4c332718699d91bb37a8ef552b123279ac260ab6da75afd81a00e2e1bff71b5c";
-          "linux_aarch64" = "dbc11eedb6ff60d846c8d3d12776cb461086127302e4d9e375f16054a6c92eec";
-          "linux_x64" = "b0046ef76beb5df9a515e5b37f700e88f2b20413fddb3694c2d6ab4860497a3f";
+          "darwin_aarch64" = "047903cb89724f0134d475647fa94d70612a7f9c26a0d61473432e14ca0f3be9";
+          "linux_aarch64" = "9686b609acdfb704012ae4bcaa64398d52930c32688a1cfded4223e91d670899";
+          "linux_x64" = "0f1312d337083b49e5ecec2554d35951af4aab88c712ce606249cfd79f3c30f6";
         }
         .${arch};
     in
