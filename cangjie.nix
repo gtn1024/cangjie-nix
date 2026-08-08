@@ -14,7 +14,7 @@ stdenv.mkDerivation rec {
 
       getUrl =
         {
-          "x86_64-linux" = "https://github.com/gtn1024/cangjie-distribution/releases/download/v${version}/cangjie-sdk-linux-x64-${version}.tar.gz";
+          "x86_64-linux" = "https://gitcode.com/gtn1024/cangjie-distribution/releases/download/v${version}/cangjie-sdk-linux-x64-${version}.tar.gz";
         }
         .${stdenv.system} or (throw "${pname}-${version}: ${stdenv.system} is unsupported.");
 
