@@ -2,22 +2,18 @@
 
 stdenv.mkDerivation rec {
   pname = "cangjie";
-  version = "1.0.3";
+  version = "1.0.5";
 
   src =
     let
       getArch =
         {
-          "aarch64-darwin" = "darwin_aarch64";
-          "aarch64-linux" = "linux_aarch64";
           "x86_64-linux" = "linux_x64";
         }
         .${stdenv.system} or (throw "${pname}-${version}: ${stdenv.system} is unsupported.");
 
       getUrl =
         {
-          "aarch64-darwin" = "https://github.com/gtn1024/cangjie-distribution/releases/download/v${version}/cangjie-sdk-mac-aarch64-${version}.tar.gz";
-          "aarch64-linux" = "https://github.com/gtn1024/cangjie-distribution/releases/download/v${version}/cangjie-sdk-linux-aarch64-${version}.tar.gz";
           "x86_64-linux" = "https://github.com/gtn1024/cangjie-distribution/releases/download/v${version}/cangjie-sdk-linux-x64-${version}.tar.gz";
         }
         .${stdenv.system} or (throw "${pname}-${version}: ${stdenv.system} is unsupported.");
@@ -25,9 +21,7 @@ stdenv.mkDerivation rec {
       getHash =
         arch:
         {
-          "darwin_aarch64" = "047903cb89724f0134d475647fa94d70612a7f9c26a0d61473432e14ca0f3be9";
-          "linux_aarch64" = "9686b609acdfb704012ae4bcaa64398d52930c32688a1cfded4223e91d670899";
-          "linux_x64" = "0f1312d337083b49e5ecec2554d35951af4aab88c712ce606249cfd79f3c30f6";
+          "linux_x64" = "bacad84df8e0281c5395bab4c40e481e3ea6cc712eed5c953903b0d561a14562";
         }
         .${arch};
     in
@@ -114,7 +108,6 @@ EOF
     homepage = "https://cangjie-lang.cn/";
     description = "Cangjie compiler";
     license = lib.licenses.asl20;
-    maintainers = with lib.maintainers; [ gtn1024 ];
     platforms = lib.platforms.linux;
     outputsToInstall = [ "out" ];
   };
